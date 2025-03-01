@@ -11,7 +11,9 @@ import { useTheme } from "next-themes";
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let genAI: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let model: any = null;
 
 if (GEMINI_API_KEY) {
@@ -24,6 +26,7 @@ interface CoordinateInputProps {
     coords: { latitude: number; longitude: number },
     locationDetails?: CityDetails[]
   ) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mapRef: React.RefObject<any>;
 }
 
@@ -42,7 +45,7 @@ export default function CoordinateInput({
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
   const [city, setCity] = useState<string>("");
-  const [apiError, setApiError] = useState<string>("");
+  const [, setApiError] = useState<string>("");
   const [cityDetails, setCityDetails] = useState<CityDetails[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { theme } = useTheme();
