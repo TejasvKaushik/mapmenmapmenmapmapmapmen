@@ -1,14 +1,17 @@
 import { Marker, useMap } from "react-map-gl/maplibre";
 import React, { useEffect, useState } from "react";
 
+import { useTheme } from "next-themes";
+
 type YouAreHereProps = {};
 
-const middleOfUSA: [number, number] = [-100, 40];
+const dtuCoordinates: [number, number] = [28.75, 77.1175];
 
 const YouAreHere: React.FC<YouAreHereProps> = () => {
   const [userLocation, setUserLocation] =
-    useState<[number, number]>(middleOfUSA);
+    useState<[number, number]>(dtuCoordinates);
   const { current: map } = useMap();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!map) return;
@@ -18,12 +21,12 @@ const YouAreHere: React.FC<YouAreHereProps> = () => {
           navigator.geolocation.getCurrentPosition(
             (position) =>
               resolve([position.coords.longitude, position.coords.latitude]),
-            () => resolve(middleOfUSA) // Ensure it always resolves to [number, number]
+            () => resolve(dtuCoordinates)
           );
         }
       );
 
-      if (location !== middleOfUSA) {
+      if (location !== dtuCoordinates) {
         setUserLocation(location);
         map.flyTo({ center: location, zoom: 14 });
       }
@@ -40,7 +43,11 @@ const YouAreHere: React.FC<YouAreHereProps> = () => {
           latitude={userLocation[1]}
           anchor="bottom"
         >
-          <div className="bg-blue-500 p-2 rounded-full shadow-md text-white">
+          <div
+            className={`p-2 rounded-full shadow-md text-white ${
+              theme === "dark" ? "bg-blue-400" : "bg-blue-600"
+            }`}
+          >
             📍 You are here!
           </div>
         </Marker>

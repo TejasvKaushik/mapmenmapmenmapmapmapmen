@@ -1,12 +1,16 @@
+import { ArrowUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import LocationDetailsDisplay from "./LocationDetails";
-import SearchResultPlaces from "./SearchResultPlaces";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
-// For Next.js, client-side accessible environment variables need to be prefixed with NEXT_PUBLIC_
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-// Initialize the API only if we have a key
 let genAI: any = null;
 let model: any = null;
 
@@ -16,7 +20,11 @@ if (GEMINI_API_KEY) {
 }
 
 interface CoordinateInputProps {
-  setCoordinates: (coords: { latitude: number; longitude: number }) => void;
+  setCoordinates: (
+    coords: { latitude: number; longitude: number },
+    locationDetails?: CityDetails[]
+  ) => void;
+  mapRef: React.RefObject<any>;
 }
 
 interface CityDetails {
@@ -29,6 +37,7 @@ interface CityDetails {
 
 export default function CoordinateInput({
   setCoordinates,
+  mapRef,
 }: CoordinateInputProps) {
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
@@ -36,125 +45,126 @@ export default function CoordinateInput({
   const [apiError, setApiError] = useState<string>("");
   const [cityDetails, setCityDetails] = useState<CityDetails[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { theme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setApiError("");
     setIsLoading(true);
 
-    // Check if a city was entered
     if (!city.trim()) {
       setApiError("Please enter a city name");
       setIsLoading(false);
       return;
     }
 
-    // Use manual coordinates if provided
     const lat = parseFloat(latitude);
     const lon = parseFloat(longitude);
     if (!isNaN(lat) && !isNaN(lon)) {
-      setCoordinates({ latitude: lat, longitude: lon });
+      setCoordinates({ latitude: lat, longitude: lon }, []);
     }
 
-    // Check if API is initialized
     if (!model) {
-      setApiError(
-        "API key is missing. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env.local file."
-      );
+      setApiError("API key is missing. Please add GEMINI_API_KEY.");
       setIsLoading(false);
       return;
     }
 
-    // System prompt to get structured JSON output
     const searchSystemPrompt =
       'Output in JSON only with keys: "latitude", "longitude", "name", "address", and "url" if available. Output as an array only.';
 
-    // Create a prompt to get city details
     const cityPrompt = `Find details about ${city}. ${searchSystemPrompt}`;
 
     try {
       const result = await model.generateContent(cityPrompt);
       const responseText = result.response.text();
-      // console.log("Raw response:", responseText);
 
-      // Parse the JSON response
       try {
-        // Extract JSON from the response without using the 's' flag
-        // First try to find opening and closing brackets
         const startIndex = responseText.indexOf("[");
         const endIndex = responseText.lastIndexOf("]");
-
         let jsonString = responseText;
 
-        // If we found valid brackets, extract just that portion
         if (startIndex !== -1 && endIndex !== -1 && startIndex < endIndex) {
           jsonString = responseText.substring(startIndex, endIndex + 1);
         }
 
         const parsedData = JSON.parse(jsonString) as CityDetails[];
         setCityDetails(parsedData);
-        console.log(cityDetails);
 
-        // If we got coordinates, use them
         if (
           parsedData.length > 0 &&
           parsedData[0].latitude &&
           parsedData[0].longitude
         ) {
-          setCoordinates({
-            latitude: parsedData[0].latitude,
-            longitude: parsedData[0].longitude,
-          });
+          setCoordinates(
+            {
+              latitude: parsedData[0].latitude,
+              longitude: parsedData[0].longitude,
+            },
+            parsedData
+          );
 
-          // Update the input fields with the retrieved coordinates
           setLatitude(parsedData[0].latitude.toString());
           setLongitude(parsedData[0].longitude.toString());
         }
       } catch (parseError) {
         console.error("Error parsing JSON:", parseError);
-        setApiError("Error parsing response data. Check console for details.");
+        setApiError("Error parsing response data.");
       }
     } catch (error) {
       console.error("Error generating content:", error);
-      setApiError("Error connecting to Gemini API. Check console for details.");
+      setApiError("Error connecting to Gemini API.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleLocationClick = (latitude: number, longitude: number) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [longitude, latitude],
+        zoom: 14,
+        essential: true,
+      });
+    }
+  };
+
   return (
-    <>
-      <div className="absolute bottom-4 left-1/2 bg-white p-4 shadow-lg rounded-lg z-10 w-80">
-        <h2 className="text-xl font-bold mb-3">City Search</h2>
-        <form onSubmit={handleSubmit}>
-          <input
+    <div>
+      <Card
+        className={cn(
+          "absolute bottom-4 left-1/2 -translate-x-1/2 p-4 shadow-lg w-80",
+          theme === "dark"
+            ? "dark:bg-zinc-900 dark:text-white"
+            : "bg-white text-black"
+        )}
+      >
+        <form onSubmit={handleSubmit} className="flex items-center gap-x-2">
+          <Input
             type="text"
-            placeholder="Enter city name"
+            placeholder="Stadiums in Liverpool"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className="block mb-2 p-2 border rounded w-full"
+            className="flex-grow p-2"
           />
-          <button
+          <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 transition-colors text-white p-2 rounded mb-2 flex justify-center items-center"
+            className="px-4 py-2 w-auto"
             disabled={isLoading}
           >
-            {isLoading ? "Searching..." : "Search City"}
-          </button>
-          {apiError && (
-            <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded">
-              {apiError}
-            </div>
-          )}
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ArrowUp className="w-4 h-4" />
+            )}
+          </Button>
         </form>
-      </div>
-
+      </Card>
       <LocationDetailsDisplay
         locationDetails={cityDetails}
         isLoading={isLoading}
+        onLocationClick={handleLocationClick}
       />
-
-      <SearchResultPlaces locationDetails={cityDetails} />
-    </>
+    </div>
   );
 }
