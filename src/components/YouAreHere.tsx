@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import { useTheme } from "next-themes";
 
-type YouAreHereProps = {};
+type YouAreHereProps = Record<string, never>;
 
 const dtuCoordinates: [number, number] = [28.75, 77.1175];
 

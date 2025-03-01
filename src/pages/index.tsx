@@ -1,7 +1,6 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import Map, {
-  FullscreenControl,
   GeolocateControl,
   NavigationControl,
   ScaleControl,
@@ -31,6 +30,7 @@ export default function Home() {
 
   const [locations, setLocations] = useState<LocationDetails[]>([]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
 
   const handleCoordinateUpdate = (
